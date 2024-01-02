@@ -15,6 +15,7 @@ const config: IConfig = {
   ClientLogo: 'https://toxicdevs.site/citizen_logo.webp',
   EmbedColor: '#FF9343',
   developers: ['510065483693817867'],
+  invite: 'https://discord.com/api/oauth2/authorize?client_id=1184289060538286080&permissions=67059739656001&scope=bot%20applications.commands'
 };
 
 export default config;

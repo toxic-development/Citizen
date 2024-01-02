@@ -1,3 +1,6 @@
+import crypto from 'crypto';
+import Citizen from '../client/Citizen';
+
 /**
  * CLIENT UTILITIES YES
  * @property {CitizenUtilities} CitizenUtilities
@@ -5,7 +8,17 @@
  * @param {string} obfuscateIP - Obfuscates an IP address.
  */
 export class CitizenUtilities {
-  
+    public client: Citizen;
+    public EncryptionKey: any;
+    public IV: string;
+
+
+    constructor(client: Citizen) {
+        this.client = client;
+        this.EncryptionKey = Buffer.from(process.env.ENCRYPTION_KEY as string, 'utf8');
+        this.IV = process.env.IV as string;
+    }
+
     public generateID(): string {
         let id = "";
         const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -14,14 +27,24 @@ export class CitizenUtilities {
     }
 
 
-    public obfuscateIP(ip: string) {
-        const split = ip.split(".");
-        return `${split[0]}.${split[1]}.XXX.XXX`;
+    public obfuscateIP(ip: string): string {
+        const iv = crypto.randomBytes(12); // GCM recommends 12 bytes
+        const cipher = crypto.createCipheriv('aes-256-gcm', this.EncryptionKey, iv);
+        let encrypted = cipher.update(ip, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        const tag = cipher.getAuthTag();
+        return iv.toString('hex') + ':' + encrypted + ':' + tag.toString('hex'); // Prepend IV and append tag to the encrypted data
     }
 
-    public removeObfuscation(ip: string) {
-        const split = ip.split(".");
-        return `${split[0]}.${split[1]}.${split[2]}.${split[3]}`;
+    public removeObfuscation(encryptedIp: string): string {
+        const parts: any = encryptedIp.split(':');
+        const iv = Buffer.from(parts.shift(), 'hex');
+        const tag = Buffer.from(parts.pop(), 'hex');
+        const decipher = crypto.createDecipheriv('aes-256-gcm', this.EncryptionKey, iv);
+        decipher.setAuthTag(tag);
+        let decrypted = decipher.update(parts.join(':'), 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted;
     }
 
     public formatBytes(bytes: number, decimals = 2): string {
@@ -34,7 +57,7 @@ export class CitizenUtilities {
     }
 
     public formatDate(date: Date): string {
-        
+
         let BaseDate = new Date(date);
 
         let options: any = {
@@ -54,7 +77,7 @@ export class CitizenUtilities {
         const min = Math.floor((ms / (1000 * 60)) % 60).toString()
         const hrs = Math.floor((ms / (1000 * 60 * 60)) % 60).toString()
         const days = Math.floor((ms / (1000 * 60 * 60 * 24)) % 60).toString()
-            
+
         return {
             days: days.padStart(1, '0'),
             hours: hrs.padStart(2, '0'),

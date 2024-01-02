@@ -11,7 +11,7 @@ class FiveMBase extends SlashBase {
       name: 'fivem',
       description: 'Base command used to view, add, manage or interact with your FiveM Server(s).',
       usage: '/fivem <add/remove/list/view/stats>',
-      example : '/fivem add <ip> <port> <name>',
+      example: '/fivem add <ip> <port> <name>',
       category: 'FiveM',
       cooldown: 5,
       ownerOnly: false,
@@ -32,13 +32,13 @@ class FiveMBase extends SlashBase {
             },
             {
               name: 'port',
-              description: 'The port of the FiveM Server (usually 30120).',
+              description: 'The port of the FiveM Server.',
               required: true,
               type: SubCommandOptions.Integer
             },
             {
               name: 'name',
-              description: 'The name of the FiveM Server.',
+              description: 'The name of the FiveM Server (look in server.cfg).',
               required: true,
               type: SubCommandOptions.String
             }
@@ -71,6 +71,12 @@ class FiveMBase extends SlashBase {
               description: 'The ID of the FiveM Server.',
               required: true,
               type: SubCommandOptions.String
+            },
+            {
+              name: 'encrypted',
+              description: 'IPs in our DB are encrypted do you want to reverse this?',
+              required: true,
+              type: SubCommandOptions.Boolean
             }
           ],
           type: SubCommandOptions.SubCommand
@@ -80,6 +86,33 @@ class FiveMBase extends SlashBase {
           usage: '/fivem list',
           example: '/fivem list',
           description: 'List all the fivem servers registered to your account.',
+          type: SubCommandOptions.SubCommand
+        },
+        {
+          name: 'rcon',
+          usage: '/fivem rcon <id> <pass> <command>',
+          example: '/fivem rcon 123456789 password status',
+          description: 'Send an RCON command to your FiveM Server.',
+          options: [
+            {
+              name: 'id',
+              description: 'The ID of the FiveM Server.',
+              required: true,
+              type: SubCommandOptions.String
+            },
+            {
+              name: 'pass',
+              description: 'The RCON password of the FiveM Server.',
+              required: true,
+              type: SubCommandOptions.String
+            },
+            {
+              name: 'command',
+              description: 'The RCON command you want to send.',
+              required: true,
+              type: SubCommandOptions.String
+            }
+          ],
           type: SubCommandOptions.SubCommand
         }
       ]
@@ -96,16 +129,23 @@ class FiveMBase extends SlashBase {
         const port = interaction.options.getInteger('port', true);
         const name = interaction.options.getString('name', true);
 
-        const db = await client.db.addFiveMServer({ id: client.utils.generateID(), ip: ip, port: port, name: name, owner: interaction.user.id, guild: interaction?.guild?.id });
-        if (!db.success) interaction.reply({ content: `${db.error}`, ephemeral: true });
+        const db = await client.db.addFiveMServer({
+          ip: ip,
+          port: port,
+          name: name,
+          owner: interaction.user.id,
+          guild: interaction?.guild?.id
+        });
+
+        if (!db.success) return interaction.reply({ content: `${db.error}`, ephemeral: true });
 
         interaction.reply({
-          ephemeral: true,
+          ephemeral: false,
           embeds: [
             new client.Embeds({
-              title: 'Success: server registered.',
+              title: 'Success: server added.',
               color: client.config.EmbedColor,
-              description: 'Your FiveM Server has been registered to your account. Make sure you keep a copy of the ID below, as you will need it to manage your server.',
+              description: 'Your FiveM Server has been added to your account.',
               fields: [
                 {
                   name: 'ID',
@@ -113,8 +153,8 @@ class FiveMBase extends SlashBase {
                   inline: true
                 },
                 {
-                  name: 'IP',
-                  value: `${client.utils.obfuscateIP(db.data.ip)}`,
+                  name: 'IP (AES Encrypted)',
+                  value: `${db.data.ip}`,
                   inline: true
                 },
                 {
@@ -131,6 +171,11 @@ class FiveMBase extends SlashBase {
                   name: 'Guild',
                   value: `${db.data.guild}`,
                   inline: true
+                },
+                {
+                  name: 'Permissions',
+                  value: 'Owner',
+                  inline: true
                 }
               ]
             })
@@ -138,121 +183,142 @@ class FiveMBase extends SlashBase {
         })
       }
 
-      break;
-
-      case 'remove': {
-
-        const id = interaction.options.getString('id', true);
-
-        const db = await client.db.removeFiveMServer({ id: id, owner: interaction.user.id });
-
-        if (!db.success) return interaction.reply({ content: `${db.error}`, ephemeral: false });
-
-        interaction.reply({
-          embeds: [
-            new client.Embeds({
-              title: 'Success: server removed.',
-              color: client.config.EmbedColor,
-              description: 'Your FiveM Server has been removed from your account.'
-            })
-          ]
-        })
-      }
-
-      break;
+        break;
 
       case 'view': {
 
         const id = interaction.options.getString('id', true);
+        const decrypt = interaction.options.getBoolean('encrypted')
 
-        const db = await client.db.getFiveMServer({ id: id, owner: interaction.user.id });
+        const db = await client.db.getFiveMServer({
+          id: id,
+          owner: interaction.user.id
+        });
 
-        if (!db.success) interaction.reply({ content: `${db.error}`, ephemeral: true });
+        if (!db.success) return interaction.reply({ content: `${db.error}`, ephemeral: true });
 
-        interaction.reply({
-          embeds: [
-            new client.Embeds({
-              title: 'Success: server found.',
-              color: client.config.EmbedColor,
-              description: 'Your FiveM Server has been found.',
-              fields: [
-                {
-                  name: 'ID',
-                  value: `${db.data.id}`,
-                  inline: true
-                },
-                {
-                  name: 'IP',
-                  value: `${client.utils.obfuscateIP(db.data.ip)}`,
-                  inline: true
-                },
-                {
-                  name: 'Port',
-                  value: `${db.data.port}`,
-                  inline: true
-                },
-                {
-                  name: 'Name',
-                  value: `${db.data.name}`,
-                  inline: true
-                },
-                {
-                  name: 'Guild',
-                  value: `${db.data.guild}`,
-                  inline: true
-                }
-              ]
-            })
-          ]
-        })
-      }
+        if (decrypt && !db.perms?.owner) {
 
-      break;
-
-      case 'list': {
-
-        const db = await client.db.getUserFiveMServers({ owner: interaction.user.id });
-
-        if (!db.success) interaction.reply({ content: `${db.error}`, ephemeral: true });
-
-        const serversArray: FiveMServer[] = [];
-
-        await db.data.map(async (s: FiveMServer) => {
-          
-          let date = client.utils.formatDate(s?.created);
-
-          serversArray.push({
-            id: s?.id,
-            ip: s?.ip,
-            port: s?.port,
-            name: s?.name,
-            owner: s?.owner,
-            guild: s?.guild,
-            created: date
+          return interaction.reply({
+            ephemeral: true,
+            content: `${interaction.user.tag} we noticed you wanted to decrypt the IP but only the server owner can execute this action and you are not the owner.`,
+            embeds: [
+              new client.Embeds({
+                title: 'Success: server found.',
+                color: client.config.EmbedColor,
+                description: 'Your FiveM Server has been found.',
+                fields: [
+                  {
+                    name: 'ID',
+                    value: `${db.data.id}`,
+                    inline: true
+                  },
+                  {
+                    name: 'IP (AES Encrypted)',
+                    value: `${db.data.ip}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Port',
+                    value: `${db.data.port}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Name',
+                    value: `${db.data.name}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Guild',
+                    value: `${db.data.guild}`,
+                    inline: true
+                  }
+                ]
+              })
+            ]
           })
-        })
 
-        const fields = await serversArray.map((s: any) => {
-          return {
-            name: s.name,
-            value: `ID: ${s.id}\nIP: ${client.utils.obfuscateIP(s.ip)}\nPort: ${s.port}\nCreated: ${s.created}\nGuild: ${s.guild}`,
-            inline: true
-          }
-        })
+        } else if (decrypt && db.perms?.owner) {
 
-        interaction.reply({
-          embeds: [
-            new client.Embeds({
-              title: 'Success: servers found.',
-              color: client.config.EmbedColor,
-              description: 'Here are all the FiveM Servers registered to your account.',
-              fields: [...fields]
-            })
-          ]
-        })
+          return interaction.reply({
+            ephemeral: true,
+            embeds: [
+              new client.Embeds({
+                title: 'Success: server found.',
+                color: client.config.EmbedColor,
+                description: 'Your FiveM Server has been found.',
+                fields: [
+                  {
+                    name: 'ID',
+                    value: `${db.data.id}`,
+                    inline: true
+                  },
+                  {
+                    name: 'IP (Decrypted)',
+                    value: `${client.utils.removeObfuscation(db.data.ip)}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Port',
+                    value: `${db.data.port}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Name',
+                    value: `${db.data.name}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Guild',
+                    value: `${db.data.guild}`,
+                    inline: true
+                  }
+                ]
+              })
+            ]
+          })
+
+        } else {
+
+          return interaction.reply({
+            ephemeral: false,
+            embeds: [
+              new client.Embeds({
+                title: 'Success: server found.',
+                color: client.config.EmbedColor,
+                description: 'Your FiveM Server has been found.',
+                fields: [
+                  {
+                    name: 'ID',
+                    value: `${db.data.id}`,
+                    inline: true
+                  },
+                  {
+                    name: 'IP (AES Encrypted)',
+                    value: `${db.data.ip}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Port',
+                    value: `${db.data.port}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Name',
+                    value: `${db.data.name}`,
+                    inline: true
+                  },
+                  {
+                    name: 'Guild',
+                    value: `${db.data.guild}`,
+                    inline: true
+                  }
+                ]
+              })
+            ]
+          })
+        }
       }
-
-      break;
 
       default: {
         interaction.reply({

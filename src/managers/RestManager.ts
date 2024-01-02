@@ -1,4 +1,4 @@
-import { REST, Routes } from 'discord.js';
+import { REST, Routes, ApplicationCommand } from 'discord.js';
 import type Citizen from '../client/Citizen';
 import config from '../config/config';
 import type { ICommand, ISlashCommand } from '../types/utils.interface';
@@ -13,6 +13,24 @@ class RestManager {
     this.client = client;
 
     this.DiscordRest.setToken(process.env.CLIENT_TOKEN as string);
+  }
+
+  public async getCommandID(name: String): Promise<string> {
+    try {
+      this.logger.info(`Getting command ID for: "${name}"`)
+
+      if (!this.client.user?.id) throw new Error('Client user was not resolved while getting command ID.');
+
+      const commands = await this.DiscordRest.get(Routes.applicationCommands(this.client.user.id)) as ApplicationCommand[];
+      const command = commands.find((command: ApplicationCommand) => command.name === name);
+
+      if (!command) throw new Error(`Command "${name}" was not found.`);
+
+      return command?.id;
+    } catch (err: any) {
+      this.logger.error(`Error while getting command ID: ${err}`);
+      throw new Error(err.stack);
+    }
   }
 
   /**
@@ -47,6 +65,23 @@ class RestManager {
       this.logger.ready(`${this.client.guildcmds.all.size} guild commands are registered!`);
     } catch (e: unknown) {
       this.logger.error(`Error while registering guild commands: ${e}`);
+    }
+  }
+
+  public async refreshSlashCommand(name: string): Promise<void> {
+    try {
+      this.logger.info(`Refreshing slash command: "${name}"`);
+
+      if (!this.client.user?.id) throw new Error('Client user was not resolved while refreshing slash command.');
+      const commandId = await this.getCommandID(name);
+
+      await this.DiscordRest.patch(Routes.applicationCommand(this.client.user.id, commandId), {
+        body: this.client.commands.get(name)?.props
+      });
+
+      this.logger.ready(`Slash command "${name}" was refreshed!`);
+    } catch (e: unknown) {
+      this.logger.error(`Error while refreshing slash command: ${e}`);
     }
   }
 }

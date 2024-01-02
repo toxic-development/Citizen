@@ -6,9 +6,6 @@
 clean
 ./clean/*
 
-# Visual Studio
-/.vscode/
-
 # packages
 package-lock.json
 yarn.lock

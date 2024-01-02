@@ -1,16 +1,16 @@
-import type { 
+import type {
   ChatInputApplicationCommandData,
-	CommandInteraction,
-	CommandInteractionOptionResolver,
-	ContextMenuCommandBuilder,
-	ContextMenuCommandInteraction,
-	GuildMember,
-	PermissionResolvable,
+  CommandInteraction,
+  CommandInteractionOptionResolver,
+  ContextMenuCommandBuilder,
+  ContextMenuCommandInteraction,
+  GuildMember,
+  PermissionResolvable,
   PermissionsString,
-  BitFieldResolvable, 
-  GatewayIntentsString, 
-  Interaction, 
-  SlashCommandBuilder 
+  BitFieldResolvable,
+  GatewayIntentsString,
+  Interaction,
+  SlashCommandBuilder
 } from 'discord.js';
 import type Citizen from '../client/Citizen';
 
@@ -29,6 +29,7 @@ export interface IConfig {
   ClientLogo: string;
   EmbedColor: string;
   developers: string[];
+  invite: 'https://discord.com/api/oauth2/authorize?client_id=1184289060538286080&permissions=67059739656001&scope=bot%20applications.commands'
 }
 
 export interface IEvent {
@@ -76,12 +77,12 @@ export interface ISlashCommandProps {
 }
 
 export interface SlashCommandOptions {
-  name: string;
-  description: string;
+  name?: string;
+  description?: string;
   usage?: string;
   example?: string;
   options?: any[];
   choices?: any[];
   required?: boolean;
-  type: number;
+  type?: number;
 }

@@ -2,36 +2,43 @@
   // Mapped from: https://www.typescriptlang.org/tsconfig
   "compilerOptions": {
     // Type Checking
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
     "resolveJsonModule": true,
-
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     // Language and Environment
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "lib": ["ESNext", "ES2022"],
+    "lib": [
+      "ESNext",
+      "ES2022"
+    ],
     "target": "ES2022",
     "useDefineForClassFields": true,
-
     // Modules
     "baseUrl": ".",
     "rootDir": "./src",
     "moduleResolution": "Node",
     "module": "CommonJS",
-    
     // Emit
     "noEmitHelpers": true,
     "importHelpers": true,
     "outDir": "./build",
     "inlineSourceMap": true,
-
     // Interop Constraints
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
   },
-  "include": ["./node_moudles/@types", "./src/**/*"]
+  "include": [
+    "./node_moudles/@types",
+    "./src/**/*"
+  ]
 }

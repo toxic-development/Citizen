@@ -4,6 +4,7 @@ import Config from '../config/config';
 import { CitizenEmbed } from '../utils/EmbedBuilder';
 import { CitizenUtilities } from '../utils/Citizen';
 import { DatabaseManager } from '../managers/DatabaseManager';
+import { GateManager } from '../managers/GateManager';
 import type { IConfig } from '../types/utils.interface';
 import PrivateManager from '../managers/PrivateManager';
 import CommandManager from '../managers/CommandManager';
@@ -19,7 +20,8 @@ class Citizen extends Client {
   public events: EventManager = new EventManager(this);
   public restApi: RestManager = new RestManager(this);
   public db: DatabaseManager = new DatabaseManager(this);
-  public utils: CitizenUtilities = new CitizenUtilities();
+  public gate: GateManager = new GateManager(this);
+  public utils: CitizenUtilities = new CitizenUtilities(this);
   public Embeds: any = CitizenEmbed
   public config: IConfig = Config;
 

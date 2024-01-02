@@ -1,0 +1,33 @@
+{
+    "recommendations": [
+      "heybourn.headwind",
+      "aaron-bond.better-comments",
+      "alefragnani.bookmarks",
+      "coenraads.bracket-pair-colorizer-2",
+      "streetsidesoftware.code-spell-checker",
+      "naumovs.color-highlight",
+      "mikestead.dotenv",
+      "usernamehw.errorlens",
+      "dsznajder.es7-react-js-snippets",
+      "dbaeumer.vscode-eslint",
+      "mhutchie.git-graph",
+      "graphql.vscode-graphql",
+      "vincaslt.highlight-matching-tag",
+      "oderwat.indent-rainbow",
+      "vtrois.gitmoji-vscode",
+      "silvenon.mdx",
+      "cardinal90.multi-cursor-case-preserve",
+      "foxundermoon.next-js",
+      "pulkitgangwar.nextjs-snippets",
+      "christian-kohler.path-intellisense",
+      "csstools.postcss",
+      "esbenp.prettier-vscode",
+      "prisma.prisma",
+      "willluke.nextjs",
+      "spikespaz.vscode-smoothtype",
+      "bradlc.vscode-tailwindcss",
+      "britesnow.vscode-toggle-quotes",
+      "pflannery.vscode-versionlens",
+      "pmneo.tsimporter"
+    ]
+  }

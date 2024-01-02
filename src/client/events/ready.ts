@@ -1,3 +1,4 @@
+import { ActivityType } from 'discord.js';
 import EventBase from '../../utils/EventBase';
 import type Citizen from '../Citizen';
 
@@ -17,6 +18,13 @@ class Ready extends EventBase {
     await client.db.connect()
 
     client.logger.info(`${client.user?.tag} is online!`);
+
+    client?.user?.setStatus('dnd');
+
+    client?.user?.setActivity({
+      name: 'Under active development!',
+      type: ActivityType.Custom
+    })
   }
 }
 
