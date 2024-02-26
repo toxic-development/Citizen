@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose';
 
-export const FiveMServerModel = model('fivem_servers', new Schema({
+export const ServerModel = model('servers', new Schema({
     id: {
         type: String,
         required: true,
@@ -8,19 +8,21 @@ export const FiveMServerModel = model('fivem_servers', new Schema({
     },
     ip: {
         type: String,
-        required: true
+        required: true,
     },
     port: {
-        type: String,
-        required: true
+        type: Number,
+        required: true,
+        unique: true
     },
     name: {
         type: String,
-        required: true
+        required: true,
     },
-    owner: {
+    type: {
         type: String,
-        required: true
+        required: false,
+        default: 'fivem'
     },
     guild: {
         type: String,
@@ -28,6 +30,6 @@ export const FiveMServerModel = model('fivem_servers', new Schema({
     },
     created: {
         type: Date,
-        default: new Date()
+        default: Date.now()
     }
-}));
+}))

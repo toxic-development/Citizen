@@ -1,7 +1,7 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type Citizen from '../client/Citizen';
-import type { IEvent } from '../types/utils.interface';
+import type Citizen from 'src/client/Citizen';
+import type { IEvent } from 'src/types/utils.interface';
 
 class EventManager {
   public client: Citizen;

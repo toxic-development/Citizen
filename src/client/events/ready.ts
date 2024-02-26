@@ -1,5 +1,6 @@
 import { ActivityType } from 'discord.js';
 import EventBase from '../../utils/EventBase';
+import { NativeManager } from '../../managers/NativeManager';
 import type Citizen from '../Citizen';
 
 class Ready extends EventBase {
@@ -16,6 +17,8 @@ class Ready extends EventBase {
     client.restApi.registerGuildCommands(client.config.GuildID);
 
     await client.db.connect()
+
+    await client.natives.createNatives();
 
     client.logger.info(`${client.user?.tag} is online!`);
 

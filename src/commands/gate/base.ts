@@ -12,8 +12,8 @@ class Forum extends SlashBase {
     constructor() {
 
         super({
-            name: 'forums',
-            description: 'Interact with the FiveM/cfx.re forums.',
+            name: 'gate',
+            description: 'View, update and manage a user permissions to your server commands.',
             usage: '/forums <subcommand> [args]',
             example: '/forums search <query>',
             category: 'Forums',

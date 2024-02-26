@@ -1,13 +1,55 @@
 import Citizen from '../client/Citizen';
-import { DatabaseResponse, GrantedServer } from '../types/db.interface';
-import { UserModel } from '../models/user';
+import { DatabaseResponse, FiveMServer, GatedCheckResponse, GrantedServer, GrantedServerPerms } from '../types/db.interface';
+import * as Models from '../models/models';
 
 export class GateManager {
 
     public client: Citizen;
+    private models = Models;
 
     constructor(client: Citizen) {
         this.client = client;
+    }
+
+    public async checkGatedAccess({ user, server, action }: GrantedServer): Promise<GatedCheckResponse> {
+
+        if (!user || !server) return {
+            success: false,
+            error: 'Parameters should include user and server.',
+        }
+
+        const db = await this.models.UserModel.findOne({ user: user });
+        const s = await db?.servers.find(s => s.id === server);
+
+        if (s?.permissions?.owner) return {
+            success: true,
+            owner: true
+        }
+
+        else if (s?.permissions?.canEdit) return {
+            success: true,
+            canEdit: true
+        }
+
+        else if (s?.permissions?.canDelete) return {
+            success: true,
+            canDelete: true
+        }
+
+        else if (s?.permissions?.canView) return {
+            success: true,
+            canView: true
+        }
+
+        else if (s?.permissions?.canRcon) return {
+            success: true,
+            canRcon: true
+        }
+
+        else return {
+            success: false,
+            error: 'Lacking permissions.',
+        }
     }
 
     /**
@@ -17,196 +59,204 @@ export class GateManager {
      * @param perms The permissions to grant.
      * @returns type: DatabaseResponse
      */
-    public async addGatedAccess({ user, server, perms }: GrantedServer): Promise<DatabaseResponse> {
+    public async addGatedAccess({ user, server, type, perms }: GrantedServer): Promise<DatabaseResponse> {
 
-        if (!user || !server) return {
+        if (!user || !server || !type || !perms) return {
             success: false,
-            error: 'Invalid user or server ID.'
+            error: 'Missing required parameters.',
+            needed: 'user, server, type, perms'
         }
 
-        if (!perms) return {
-            success: false,
-            error: 'Invalid permissions.'
+        const gate = await this.checkGatedAccess({ user: user, server: server });
+
+        if (gate.success) return {
+            success: true,
+            error: 'User appears to already have access to this server, if you\'d like to grant them more permissions please use the `/gate update` command.',
         }
 
-        let gatedAccess = await this.canViewServer({ user: user, server: server });
-
-        if (gatedAccess.success) return {
-            success: false,
-            error: 'User already has access to this server.'
-        }
-
-        const db = await new UserModel({
-            id: user,
-            servers: {
+        if (!gate.success) await new this.models.UserModel({
+            user: user, servers: [{
                 id: server,
+                type: type,
                 permissions: {
-                    owner: perms.owner ? perms.owner : false,
-                    canEdit: perms.canEdit ? perms.canEdit : false,
-                    canDelete: perms.canDelete ? perms.canDelete : false,
-                    canView: perms.canView ? perms.canView : false
+                    owner: false,
+                    canRcon: perms.canRcon,
+                    canEdit: perms.canEdit,
+                    canView: perms.canView,
+                    canDelete: perms.canDelete
                 }
-            }
-        }).save().catch((e: Error) => {
-            console.log(e.stack)
-
+            }]
+        }).save().catch((err: Error) => {
             return {
                 success: false,
-                error: e.message
+                error: err.message,
             }
         });
 
         return {
             success: true,
-            error: null,
-            data: db
+            error: `Success user has been granted: ${perms} permissions for server: ${server}`,
         }
     }
 
-    public async removeGatedAccess({ user, server }: GrantedServer): Promise<DatabaseResponse> {
+    public async updateGatedAccess({ user, server, perms }: GrantedServer): Promise<DatabaseResponse> {
+
+        if (!user || !server || !perms) return {
+            success: false,
+            error: 'Missing required parameters.',
+            needed: 'user, server, perms'
+        }
+
+        const gate = await this.checkGatedAccess({ user: user, server: server });
+
+        if (!gate.success) return {
+            success: false,
+            error: 'User does not have access to this server.',
+        }
+
+        if (gate.success) await this.models.UserModel.updateOne({ id: user, 'servers.id': server }, {
+            $set: {
+                'servers.$.permissions': {
+                    owner: false,
+                    canRcon: perms.canRcon,
+                    canEdit: perms.canEdit,
+                    canView: perms.canView,
+                    canDelete: perms.canDelete
+                }
+            }
+        }).catch((err: Error) => {
+            return {
+                success: false,
+                error: err.message,
+            }
+        });
+
+        return {
+            success: true,
+            error: `Success user has been granted: ${perms} permissions for server: ${server}`,
+        }
+    }
+
+    public async removeGatedAccess({ user, server, perms }: GrantedServer): Promise<DatabaseResponse> {
 
         if (!user || !server) return {
             success: false,
-            error: 'Invalid user or server ID.'
+            error: 'Missing required parameters.',
+            needed: 'user, server, perms'
         }
 
-        let gatedAccess = await this.canViewServer({ user: user, server: server });
+        const gate = await this.checkGatedAccess({ user: user, server: server });
 
-        if (!gatedAccess.success) return {
+        if (!gate.success) return {
             success: false,
-            error: 'User does not have access to this server.'
+            error: 'User does not have access to this server.',
         }
 
-        const db = await UserModel.findOne({ id: user, 'servers.id': server });
+        if (gate.success) await this.models.UserModel.updateOne({ id: user, 'servers.id': server }, {
+            $set: {
+                'servers.$.permissions': {
+                    owner: false,
+                    canRcon: perms?.canRcon,
+                    canEdit: perms?.canEdit,
+                    canView: perms?.canView,
+                    canDelete: perms?.canDelete
+                }
+            }
+        }).catch((err: Error) => {
+            return {
+                success: false,
+                error: err.message,
+            }
+        });
 
-        await UserModel.findOneAndUpdate({ id: user, 'servers.id': server }, {
+        return {
+            success: true,
+            error: `Success user has been removed from server: ${server}`,
+        }
+    }
+
+    public async revokeAccess({ user, server }: GrantedServer): Promise<DatabaseResponse> {
+
+        if (!user || !server) return {
+            success: false,
+            error: 'Missing required parameters.',
+            needed: 'user, server'
+        }
+
+        const gate = await this.checkGatedAccess({ user: user, server: server });
+
+        if (!gate.success) return {
+            success: false,
+            error: 'User does not have access to this server.',
+        }
+
+        if (gate.success) await this.models.UserModel.updateOne({ id: user, 'servers.id': server }, {
             $pull: {
                 servers: {
                     id: server
                 }
             }
-        }).catch((e: Error) => {
-            console.log(e.stack)
-
+        }).catch((err: Error) => {
             return {
                 success: false,
-                error: e.message
+                error: err.message,
             }
         });
 
         return {
             success: true,
-            error: null,
-            data: db
+            error: `Success user has been removed from server: ${server}`,
         }
     }
 
-    public async isServerOwner({ user, server }: GrantedServer): Promise<DatabaseResponse> {
+    public async verifyPermsForAction({ user, server, action }: GrantedServer): Promise<DatabaseResponse> {
 
-        const db = await UserModel.findOne({ id: user, 'servers.id': server });
-
-        if (!db) return { success: false }
-
-        const hasPermissions = db.servers.some((s: any) => {
-            return s.id.toString() === server && s.permissions.owner;
-        })
-
-        if (!hasPermissions) return { success: false }
-
-        return { success: true }
-    }
-
-    public async canViewServer({ user, server }: GrantedServer): Promise<DatabaseResponse> {
-
-        const db = await UserModel.findOne({ id: user, 'servers.id': server });
-
-        if (!db) return { success: false }
-
-        const hasPermissions = db.servers.some((s: any) => {
-            return s.id.toString() === server && s.permissions.canView;
-        })
-
-        if (!hasPermissions) return { success: false }
-
-        return { success: true }
-    }
-
-    public async canEditServer({ user, server }: GrantedServer): Promise<DatabaseResponse> {
-
-        if (!user || !server) return {
-            success: false,
-            error: 'Invalid user or server ID.'
-        }
-
-        const db = await UserModel.findOne({ id: user, 'servers.id': server });
-
-        if (!db) return {
-            success: false,
-            error: 'No server found with that ID.'
-        }
-
-        const hasPermissions = db.servers.some((s: any) => {
-            return s.id.toString() === server && s.permissions.canEdit;
-        })
-
-        if (!hasPermissions) return { success: false }
-
-        return { success: true }
-    }
-
-    public async canDeleteServer({ user, server }: GrantedServer): Promise<DatabaseResponse> {
-
-        if (!user || !server) return {
-            success: false,
-            error: 'Invalid user or server ID.'
-        }
-
-        const db = await UserModel.findOne({ id: user, 'servers.id': server });
-
-        if (!db) return {
-            success: false,
-            error: 'No server found with that ID.'
-        }
-
-        const hasPermissions = db.servers.some((s: any) => {
-            return s.id.toString() === server && s.permissions.canDelete;
-        })
-
-        if (!hasPermissions) return { success: false }
-
-        return { success: true }
-    }
-
-    public async getServerPermissions({ user, server }: GrantedServer): Promise<DatabaseResponse> {
-
-        if (!user || !server) return {
-            success: false,
-            error: 'Invalid user or server ID.'
-        }
-
-        const db = await UserModel.findOne({ id: user, 'servers.id': server });
-
-        if (!db) return {
-            success: false,
-            error: 'No server found with that ID.'
-        }
-
-        if (db && db.servers && db.servers[0] && db.servers[0].permissions) {
+        if (!user || !server || !action) {
             return {
-                success: true,
-                error: null,
-                perms: {
-                    owner: db.servers[0].permissions.owner,
-                    canEdit: db.servers[0].permissions.canEdit,
-                    canDelete: db.servers[0].permissions.canDelete,
-                    canView: db.servers[0].permissions.canView
-                }
+                success: false,
+                error: 'Missing required parameters.',
+                needed: 'user, server, action'
+            }
+        }
+
+        const userr = await this.models.UserModel.findOne({ id: user });
+
+        if (!userr) {
+            return {
+                success: false,
+                error: 'Unable to locate user.',
+            }
+        }
+
+        const s: any = userr.servers.find(s => s.id === server);
+
+        if (!s) {
+            return {
+                success: false,
+                error: 'User does not have any access to this server.',
+            }
+        }
+
+        const actionPermissionsMap = {
+            'edit': 'canEdit',
+            'delete': 'canDelete',
+            'view': 'canView',
+            'rcon': 'canRcon'
+        };
+
+        const requiredPermission = actionPermissionsMap[action];
+
+        if (!s.permissions[requiredPermission] && !s.permissions?.owner) {
+            return {
+                success: false,
+                error: `Lacking permissions, required perms are: 'owner' or '${requiredPermission}'.`,
             }
         }
 
         return {
-            success: false,
-            error: 'No permissions found.'
+            success: true,
+            error: 'User has the required permissions.',
+            perms: s.permissions
         }
     }
 }

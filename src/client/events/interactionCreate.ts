@@ -1,4 +1,6 @@
 import { Collection, ApplicationCommandOptionType } from 'discord.js';
+import { GuildModel } from '../../models/guild.model';
+import { CmdModel } from '../../models/cmd.model';
 import type { CacheType, Interaction } from 'discord.js';
 import EventBase from '../../utils/EventBase';
 import type Citizen from '../Citizen';
@@ -13,15 +15,68 @@ class InteractionCreate extends EventBase {
    * @param client 
    * @param interaction 
    */
-  public execute(client: Citizen, interaction: Interaction<CacheType>): any {
+  public async execute(client: Citizen, interaction: Interaction<CacheType>): Promise<any> {
     if (interaction.isCommand()) {
-      
+
       const command = client.commands.get(interaction.commandName);
       const guildcmds = client.guildcmds.get(interaction.commandName);
+
+      let db: any = await GuildModel.findOne({ id: interaction?.guild?.id });
+      let cmddb: any = await CmdModel.findOne({ guild: interaction?.guild?.id });
+
+      if (db?.blacklist) {
+
+        await interaction.reply({
+          content: 'Whoops, this server is blacklisted from using my services, you should probably contact our [support team](https://toxicdevs.site/discord).',
+          ephemeral: true
+        });
+
+        if (interaction?.guild?.id !== '871440804638519337') interaction.guild?.leave();
+      }
+
+      if (!db) db = await new GuildModel({
+        id: interaction?.guild?.id,
+        name: interaction?.guild?.name,
+        icon: interaction?.guild?.iconURL(),
+        blacklist: false,
+        beta: false,
+        role: 'none',
+        channels: {
+          forums: 'none',
+          fivem: 'none',
+          redm: 'none',
+          logs: 'none'
+        },
+        settings: {
+          allow_Forums: false,
+          allow_FiveM: false,
+          allow_RedM: false,
+          allow_Beta: false,
+          allow_Logs: false,
+          ownerOnly: false
+        }
+      }).save().catch((err: any) => client.logger.error(err.stack));
+
+      if (!cmddb) cmddb = await new CmdModel({
+        guild: interaction?.guild?.id,
+        fivem: true,
+        redm: false,
+        forums: true
+      }).save().catch((err: any) => client.logger.error(err.stack));
 
       const cmd = command || guildcmds;
 
       if (!cmd) return;
+
+      if (cmd.props.name === 'forums' && !cmddb?.forums) return interaction.reply({
+        content: 'Whoops, looks like our forums commands have been disabled by the server owner or an administrator.',
+        ephemeral: true
+      });
+
+      if (cmd.props.name === 'fivem' && !cmddb?.fivem) return interaction.reply({
+        content: 'Whoops, looks like our FiveM commands have been disabled by the server owner or an administrator.',
+        ephemeral: true
+      });
 
       if (cmd.props.ownerOnly && interaction.member?.user.id !== client.config.OwnerID) return;
 
@@ -38,7 +93,7 @@ class InteractionCreate extends EventBase {
         if (timestamps?.has(interaction.user.id)) {
           const cooldown = timestamps.get(interaction.user.id);
 
-          if(cooldown) {
+          if (cooldown) {
             const expirationTime = cooldown + cooldownAmount;
 
             if (now < expirationTime) {

@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import Citizen from '../client/Citizen';
+import request from 'request';
+
 
 /**
  * CLIENT UTILITIES YES
@@ -26,6 +28,10 @@ export class CitizenUtilities {
         return id;
     }
 
+    public spliceEncyptedIP(encryptedIp: string): string {
+        const parts: any = encryptedIp.split(':');
+        return parts[1];
+    }
 
     public obfuscateIP(ip: string): string {
         const iv = crypto.randomBytes(12); // GCM recommends 12 bytes
@@ -33,7 +39,7 @@ export class CitizenUtilities {
         let encrypted = cipher.update(ip, 'utf8', 'hex');
         encrypted += cipher.final('hex');
         const tag = cipher.getAuthTag();
-        return iv.toString('hex') + ':' + encrypted + ':' + tag.toString('hex'); // Prepend IV and append tag to the encrypted data
+        return iv.toString('hex') + ':' + encrypted + ':' + tag.toString('hex');
     }
 
     public removeObfuscation(encryptedIp: string): string {

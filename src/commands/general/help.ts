@@ -4,302 +4,126 @@ import config from '../../config/config';
 import { SlashBase } from '../../utils/CommandBase';
 import { SubCommandOptions } from '../../types/base.interface';
 import { SlashCommandOptions, ISlashCommand } from '../../types/utils.interface';
-import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ComponentType } from 'discord.js'
 
 class Help extends SlashBase {
     constructor(client: Citizen) {
 
         super({
             name: 'help',
-            description: 'View all commands or get help with a specific command.',
+            description: 'View a list of commands or info.',
             category: 'General',
-            usage: '/help | /help <command>',
-            example: '/help | /help ping',
+            usage: '/help',
+            example: '/help',
             cooldown: 5,
             ownerOnly: false,
             userPermissions: [],
             clientPermissions: [],
             options: [
                 {
-                    name: 'command',
-                    description: 'The command you want to get help with.',
+                    name: 'category',
+                    description: 'Select a category to view commands from.',
+                    type: SubCommandOptions.String,
                     required: false,
-                    choices: [{
-                        name: '/help',
-                        value: 'help'
-                    }, {
-                        name: '/ping',
-                        value: 'ping'
-                    }, {
-                        name: '/fivem',
-                        value: 'fivem'
-                    }],
-                    type: SubCommandOptions.String
+                    choices: [
+                        {
+                            name: 'general',
+                            value: 'general'
+                        },
+                        {
+                            name: 'servers',
+                            value: 'servers'
+                        },
+                    ]
                 }
-            ],
+            ]
         });
     }
 
     public async execute(client: Citizen, interaction: ChatInputCommandInteraction<CacheType>): Promise<any> {
 
-        const command = interaction.options.getString('command');
-        const general = client.commands.category('General');
-        const fivem = client.commands.category('FiveM');
+        const category = await interaction.options.getString('category');
 
-        if (command) {
+        switch (category) {
 
-            const cmd = client.commands.get(command);
+            case 'general': {
 
-            if (!cmd) interaction.reply({ content: 'That command does not exist.', ephemeral: true });
+                const generalCommands = client.commands.category('General');
+                const generalArray: SlashCommandOptions[] = [];
 
-            if (cmd?.props.name === 'fivem') {
+                await generalCommands.map((cmd: ISlashCommand) => {
+                    generalArray.push(cmd.props)
+                })
 
-                let addCmd = cmd?.props.options?.find((option: any) => option.name === 'add');
+                const general = generalArray.map((c: SlashCommandOptions) => {
+                    return {
+                        name: c.name,
+                        value: `**About:** ${c.description}\n**Usage:** \`${c.usage}\`\n**Example:** \`${c.example}\``,
+                        inline: true
+                    }
+                })
 
                 return interaction.reply({
                     embeds: [
                         new client.Embeds({
-                            title: `Help for /${cmd?.props.name}`,
-                            description: `${cmd?.props.description}`,
-                            color: `${client.config.EmbedColor}`,
-                            fields: [
-                                {
-                                    name: 'Add a server',
-                                    value: `• \`${addCmd?.usage}\`\n• \`${addCmd?.example}\``,
-                                    inline: true
-                                }
-                            ]
+                            title: 'General Commands',
+                            description: "Here is a list of all the general commands, you can run them using `/<command>`. Example: `/ping`",
+                            color: config.EmbedColor,
+                            fields: [...general]
                         })
                     ]
                 })
             }
 
-            return interaction.reply({
+            case 'servers': {
+
+                const serrversCommands = client.commands.category('Servers');
+                const serversArray: SlashCommandOptions[] = [];
+
+                await serrversCommands.map(async (cmd: ISlashCommand) => {
+                    await cmd?.props?.options?.map((opt: SlashCommandOptions) => {
+                        serversArray.push(opt)
+                    })
+                })
+
+                const servers = serversArray.map((c: SlashCommandOptions) => {
+                    return {
+                        name: c.name,
+                        value: `**About:** ${c.description}\n**Usage:** \`${c.usage}\`\n**Example:** \`${c.example}\``,
+                        inline: true
+                    }
+                })
+
+                return interaction.reply({
+                    embeds: [
+                        new client.Embeds({
+                            title: 'Servers Commands',
+                            description: "Here is a list of all the servers commands, you can run them using `/<command>`. Example: `/servers add`",
+                            color: config.EmbedColor,
+                            fields: [...servers]
+                        })
+                    ]
+                })
+            }
+
+            default: return interaction.reply({
                 embeds: [
                     new client.Embeds({
-                        title: `Help for ${cmd?.props.name}`,
-                        description: `${cmd?.props.description}`,
-                        color: `${client.config.EmbedColor}`,
+                        title: 'Useful Information',
+                        description: 'Here is some useful information about the bot.',
+                        color: config.EmbedColor,
                         fields: [
                             {
-                                name: 'Usage',
-                                value: `\`${cmd?.props.usage}\``
-                            },
-                            {
-                                name: 'Example',
-                                value: `\`${cmd?.props.example}\``
+                                name: 'Useful Links',
+                                value: `• [Dashboard](https://citizenbot.xyz)\n
+                                • [Invite Link](${config.invite})\n
+                                • [Support Server](https://toxicdevs.site/discord)\n
+                                • [GitHub](https://github.com/toxic-development/Citizen)\n
+                                • [Twitter/X](https://twitter.com/CitizenFXBot)`,
+                                inline: true
                             }
                         ]
                     })
                 ]
-            })
-        } else {
-
-            const select = new StringSelectMenuBuilder()
-                .setCustomId('help')
-                .setPlaceholder('Select a category to view its commands.')
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('Main Menu')
-                        .setDescription('Back to the main help command')
-                        .setValue('main'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('General')
-                        .setDescription('All of our essential commands.')
-                        .setValue('general'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('FiveM')
-                        .setDescription('All of our FiveM commands.')
-                        .setValue('fivem'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('Development')
-                        .setDescription('All of our development commands.')
-                        .setValue('development')
-                )
-
-            const row: any = new ActionRowBuilder()
-                .addComponents(select)
-
-            await interaction.reply({
-                embeds: [
-                    new client.Embeds({
-                        title: 'Help',
-                        description: `Select a category to view its commands.`,
-                        color: `${client.config.EmbedColor}`,
-                    })
-                ],
-                components: [row]
-            })
-
-            const collector = interaction.channel?.createMessageComponentCollector({
-                componentType: ComponentType.StringSelect,
-                dispose: true,
-                idle: 10000,
-            });
-
-            collector?.checkEnd();
-
-            collector?.on('collect', async i => {
-
-                switch (i.values[0]) {
-                    case 'main':
-                        await i.update({
-                            embeds: [
-                                new client.Embeds({
-                                    title: 'Help',
-                                    description: `Select a category to view its commands.`,
-                                    color: `${client.config.EmbedColor}`,
-                                })
-                            ],
-                            components: [row]
-                        })
-                        break;
-                    case 'general':
-                        await i.update({
-                            embeds: [
-                                new client.Embeds({
-                                    title: 'General Commands',
-                                    description: `Here is a list of all the essential commands.`,
-                                    color: `${client.config.EmbedColor}`,
-                                    fields: [
-                                        {
-                                            name: 'Commands',
-                                            value: `**${general.map(cmd => cmd.props.name).join(', ')}**`
-                                        }
-                                    ]
-                                })
-                            ],
-                            components: [row]
-                        })
-                        break;
-                    case 'fivem':
-
-                        const cmdArray: SlashCommandOptions[] = [];
-
-                        await fivem.map((cmd: ISlashCommand) => {
-                            cmd.props.options?.map((opt: SlashCommandOptions) => {
-                                cmdArray.push(opt)
-                            })
-                        })
-
-                        const fields = cmdArray.map((c: SlashCommandOptions) => {
-                            return {
-                                name: c.name,
-                                value: `**About:** ${c.description}\n**Usage:** \`${c.usage}\`\n**Example:** \`${c.example}\``,
-                                inline: true
-                            }
-                        })
-
-                        await i.update({
-                            embeds: [
-                                new client.Embeds({
-                                    title: 'FiveM Commands',
-                                    description: 'Here is a list of all the FiveM commands. They can be ran using the base `/fivem` command ex: `/fivem add`',
-                                    color: `${client.config.EmbedColor}`,
-                                    fields: [...fields]
-                                })
-                            ],
-                            components: [row]
-                        })
-                        break;
-                    case 'development':
-
-                        if (!client.config.developers.includes(i.user.id)) i.reply({ content: 'You are not a developer.', ephemeral: true });
-
-                        await i.update({
-                            embeds: [
-                                new client.Embeds({
-                                    title: 'Development Commands',
-                                    description: `Here is a list of all the development commands.`,
-                                    color: `${client.config.EmbedColor}`,
-                                    fields: [
-                                        {
-                                            name: 'Commands',
-                                            value: `**${client.commands.category('Development').map(cmd => cmd.props.name).join(', ')}**`
-                                        }
-                                    ]
-                                })
-                            ],
-                            components: [row]
-                        })
-                        break;
-                }
-            })
-
-            collector?.on('end', async (collected, reason) => {
-
-                if (reason === 'user') {
-                    interaction.editReply({
-                        embeds: [
-                            new client.Embeds({
-                                title: 'Error: interaction closed',
-                                description: `The interaction was closed and will now be aborted.`,
-                                color: `${client.config.EmbedColor}`,
-                                fields: [
-                                    {
-                                        name: 'Collector',
-                                        value: `Collected: \`${collected.size}\` items before close`
-                                    },
-                                    {
-                                        name: 'Reason',
-                                        value: `Closed by: \`${interaction.user.tag}\``
-                                    }
-                                ]
-                            })
-                        ],
-                        components: []
-                    })
-
-                    setTimeout(async () => {
-                        await interaction.deleteReply();
-                    }, 5000)
-                } else if (reason === 'idle') {
-                    interaction.editReply({
-                        embeds: [
-                            new client.Embeds({
-                                title: 'Error: interaction timed out',
-                                description: `The interaction timed out after 10 seconds and will now be aborted.`,
-                                color: `${client.config.EmbedColor}`,
-                                fields: [
-                                    {
-                                        name: 'Collector',
-                                        value: `Collected: \`${collected.size}\` items before close`
-                                    }
-                                ]
-                            })
-                        ],
-                        components: []
-                    })
-
-                    setTimeout(async () => {
-                        await interaction.deleteReply();
-                    }, 5000)
-                } else {
-                    interaction.editReply({
-                        embeds: [
-                            new client.Embeds({
-                                title: 'Error: interaction closed',
-                                description: `The interaction was closed and will now be aborted.`,
-                                color: `${client.config.EmbedColor}`,
-                                fields: [
-                                    {
-                                        name: 'Collector',
-                                        value: `Collected: \`${collected.size}\` items before close`
-                                    },
-                                    {
-                                        name: 'Reason',
-                                        value: `Closed with reason: \`${reason}\``
-                                    }
-                                ]
-                            })
-                        ],
-                        components: []
-                    })
-
-                    setTimeout(async () => {
-                        await interaction.deleteReply();
-                    }, 5000)
-                }
             })
         }
     }

@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import Config from '../config/config';
 import { CitizenEmbed } from '../utils/EmbedBuilder';
 import { CitizenUtilities } from '../utils/Citizen';
-import { DatabaseManager } from '../managers/DatabaseManager';
-import { GateManager } from '../managers/GateManager';
+import { ServerManager, GateManager, DatabaseManager } from '../managers';
+import { NativeManager } from '../managers/NativeManager';
 import type { IConfig } from '../types/utils.interface';
 import PrivateManager from '../managers/PrivateManager';
 import CommandManager from '../managers/CommandManager';
@@ -17,11 +17,13 @@ class Citizen extends Client {
   public cooldowns = new Collection<string, Collection<string, number>>();
   public guildcmds: PrivateManager = new PrivateManager(this);
   public commands: CommandManager = new CommandManager(this);
-  public events: EventManager = new EventManager(this);
-  public restApi: RestManager = new RestManager(this);
-  public db: DatabaseManager = new DatabaseManager(this);
-  public gate: GateManager = new GateManager(this);
+  public serverManager: ServerManager = new ServerManager(this);
   public utils: CitizenUtilities = new CitizenUtilities(this);
+  public db: DatabaseManager = new DatabaseManager(this);
+  public events: EventManager = new EventManager(this);
+  public natives: NativeManager = new NativeManager();
+  public restApi: RestManager = new RestManager(this);
+  public gate: GateManager = new GateManager(this);
   public Embeds: any = CitizenEmbed
   public config: IConfig = Config;
 
@@ -30,10 +32,6 @@ class Citizen extends Client {
     this.init();
   }
 
-  /**
-   * Authenticate Discord bot connection
-   * @param token Discord bot token
-   */
   public async authenticate(token: string): Promise<void> {
     try {
       this.logger.info(`Initializing client with token ${token.substring(0, 5)}.****`);
@@ -43,9 +41,6 @@ class Citizen extends Client {
     }
   }
 
-  /**
-   * Initialise client modules
-   */
   private init(): void {
     this.guildcmds.load(join(__dirname, '../private/'));
     this.commands.load(join(__dirname, '../commands/'));

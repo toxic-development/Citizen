@@ -46,7 +46,7 @@ class CommandManager {
         const command: ISlashCommand = new commandInstance.default;
 
         if (command.props.name && typeof (command.props.name) === 'string') {
-          if (this.commands.get(command.props.name)) return this.client.logger.error(`Two or more commands have the same name ${command.props}`);
+          if (this.commands.get(command.props.name)) return this.client.logger.error(`Two or more commands have the same name ${command.props.name}`);
           this.commands.set(command.props.name, command);
         }
       }

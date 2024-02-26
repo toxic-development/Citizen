@@ -48,16 +48,20 @@ export class ForumManager {
     }
 
     public async searchForums(params: SearchParams): Promise<SearchResponse> {
-        const response = await axios.get(`https://forum.cfx.re/search.json`, {
-            params: {
-                q: params.q,
-            }
-        });
+
+        const qs = new URLSearchParams({
+            q: params.q as string,
+            max_posts: params.max_posts as any
+        })
+
+        const response = await axios.get(`https://forum.cfx.re/search.json?${qs}`);
 
         if (response.status !== 200) return {
             success: false,
             error: response.statusText
         };
+
+        console.log(response.data.posts)
 
         let limitedPosts: any = [];
 
@@ -106,7 +110,11 @@ export class ForumManager {
 
     public async filterByType({ query, type, max }: FilteredSearch): Promise<SearchResponse> {
 
-        const forum = await fetch(`https://forum.cfx.re/search.json?q=${query}`);
+        const qs = new URLSearchParams({
+            q: query as string,
+        })
+
+        const forum = await fetch(`https://forum.cfx.re/search.json?${qs}`);
         const allowed: ForumTypes = ForumTypes[type as keyof typeof ForumTypes];
 
         let data;
