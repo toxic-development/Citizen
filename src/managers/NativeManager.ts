@@ -86,6 +86,8 @@ export class NativeManager {
         }
 
         this.logger.ready(`Finished syncing CFX Natives | ✅: ${fulfilledCount} ❌: ${errors.length}`);
+
+        this.cfxNatives = [];
     }
 
     public async findCfxNative(name: string): Promise<any> {
